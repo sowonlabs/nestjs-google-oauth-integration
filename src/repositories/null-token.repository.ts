@@ -7,7 +7,7 @@ import { TokenRepository } from '../interfaces/token-repository.interface';
  */
 @Injectable()
 export class NullTokenRepository implements TokenRepository {
-  private readonly logger = new Logger(NullTokenRepository.name);
+  private logger = new Logger(NullTokenRepository.name);
 
   async saveToken(token: Credentials, userId?: string): Promise<void> {
     this.logger.warn('Using NullTokenRepository - tokens will not be saved');

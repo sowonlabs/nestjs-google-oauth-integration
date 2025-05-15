@@ -15,7 +15,7 @@ export interface FileSystemTokenRepositoryOptions {
 
 @Injectable()
 export class FileSystemTokenRepository implements TokenRepository {
-  private readonly logger = new Logger(FileSystemTokenRepository.name);
+  private logger = new Logger(FileSystemTokenRepository.name);
   private readonly tokenDir: string;
   private readonly tokenPath: string;
 
