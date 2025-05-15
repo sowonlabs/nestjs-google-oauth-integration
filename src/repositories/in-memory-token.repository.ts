@@ -7,7 +7,7 @@ import { TokenRepository } from '../interfaces/token-repository.interface';
  */
 @Injectable()
 export class InMemoryTokenRepository implements TokenRepository {
-  private readonly logger = new Logger(InMemoryTokenRepository.name);
+  private logger = new Logger(InMemoryTokenRepository.name);
   private readonly tokens: Map<string, Credentials> = new Map();
   private readonly DEFAULT_USER_ID = 'default';
 

@@ -10,7 +10,7 @@ import { JwtUtils } from './utils/jwt.utils';
 
 @Injectable()
 export class GoogleOAuthService {
-  private readonly logger = new Logger(GoogleOAuthService.name);
+  private logger = new Logger(GoogleOAuthService.name);
 
   constructor(
     @Inject('TOKEN_REPOSITORY') private readonly tokenRepository: TokenRepository,
