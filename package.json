@@ -1,6 +1,6 @@
 {
   "name": "@sowonai/nestjs-google-oauth-integration",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "NestJS module for Google OAuth integration",
   "keywords": [
     "nestjs",
