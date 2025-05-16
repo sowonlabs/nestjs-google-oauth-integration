@@ -11,6 +11,10 @@ export interface GoogleOAuthOptions {
    * Optional: Token repository class or instance
    */
   tokenRepository?: Type<TokenRepository> | TokenRepository;
+  logging?: {
+    enabled: boolean;
+    level?: string;
+  }
 }
 
 @Module({})

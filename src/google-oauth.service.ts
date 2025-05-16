@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { authenticate } from '@google-cloud/local-auth';
 import { TokenRepository } from './interfaces/token-repository.interface';
 import { google, gmail_v1 } from 'googleapis';
@@ -7,15 +7,22 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { GoogleOAuthOptions } from './google-oauth.module';
 import { JwtUtils } from './utils/jwt.utils';
+import { CustomLoggerService } from './logger/custom-logger.service';
 
 @Injectable()
 export class GoogleOAuthService {
-  private logger = new Logger(GoogleOAuthService.name);
+  private readonly logger: CustomLoggerService;
 
   constructor(
     @Inject('TOKEN_REPOSITORY') private readonly tokenRepository: TokenRepository,
     @Inject('GOOGLE_OAUTH_OPTIONS') private readonly options: GoogleOAuthOptions
   ) {
+    this.logger = new CustomLoggerService(GoogleOAuthService.name, options);
+    this.logger.debug('GoogleOAuthService initialized with options: ' + JSON.stringify(options));
+  }
+
+  hello() {
+    this.logger.debug('Hello from GoogleOAuthService');
   }
 
   /**
@@ -162,3 +169,4 @@ export class GoogleOAuthService {
     return true;
   }
 }
+
