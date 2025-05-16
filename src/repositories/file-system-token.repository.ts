@@ -1,9 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, LoggerService } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { Credentials } from 'google-auth-library';
 import { TokenRepository } from '../interfaces/token-repository.interface';
+import { NothingLogger } from '../logger/nothing-logger';
 
 /**
  * Options for FileSystemTokenRepository
@@ -15,7 +16,7 @@ export interface FileSystemTokenRepositoryOptions {
 
 @Injectable()
 export class FileSystemTokenRepository implements TokenRepository {
-  private logger = new Logger(FileSystemTokenRepository.name);
+  private logger:LoggerService = new NothingLogger(FileSystemTokenRepository.name);
   private readonly tokenDir: string;
   private readonly tokenPath: string;
 
@@ -25,13 +26,17 @@ export class FileSystemTokenRepository implements TokenRepository {
     this.ensureTokenDirExists();
   }
 
+  setLogger(logger: LoggerService): void {
+    this.logger = logger;
+  }
+
   /**
    * Ensures the token directory exists. Creates it if it does not exist.
    */
   private ensureTokenDirExists(): void {
     if (!fs.existsSync(this.tokenDir)) {
       fs.mkdirSync(this.tokenDir, { recursive: true });
-      this.logger.debug(`Created token directory at ${this.tokenDir}`);
+      this.logger.debug?.(`Created token directory at ${this.tokenDir}`);
     }
   }
 
@@ -62,10 +67,10 @@ export class FileSystemTokenRepository implements TokenRepository {
       
       if (fs.existsSync(tokenPath)) {
         const token = JSON.parse(fs.readFileSync(tokenPath, 'utf-8'));
-        this.logger.debug('Token loaded successfully');
+        this.logger.debug?.('Token loaded successfully');
         return token;
       }
-      this.logger.debug('No token file found');
+      this.logger.debug?.('No token file found');
       return null;
     } catch (error) {
       this.logger.error('Error occurred while loading token:', error);
