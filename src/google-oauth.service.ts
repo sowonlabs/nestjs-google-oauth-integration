@@ -90,7 +90,7 @@ export class GoogleOAuthService {
    * @returns User ID or default value
    */
   getUserIdFromIdToken(idToken: string, defaultUserId: string = 'default'): string {
-    return JwtUtils.getUserIdFromIdToken(idToken, defaultUserId);
+    return JwtUtils.getUserIdFromIdToken(idToken, defaultUserId, this.logger);
   }
 
   /**
