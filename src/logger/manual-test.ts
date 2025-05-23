@@ -36,7 +36,8 @@ const service = new GoogleOAuthService(
       enabled: true,
       level: 'error'
     }
-  }
+  },
+  appLogger // Pass the app logger to the service
 );
 
 // Test direct JwtUtils usage with app logger

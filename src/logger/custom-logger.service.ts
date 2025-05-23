@@ -1,18 +1,26 @@
-import { ConsoleLogger, Injectable, LogLevel, Scope } from '@nestjs/common';
+import { ConsoleLogger, Injectable, LoggerService, LogLevel, Scope, Optional, Inject } from '@nestjs/common';
 import { GoogleOAuthOptions } from '../google-oauth.module';
 
 /**
  * Custom Logger Service
  * Supports log level filtering and logging activation/deactivation based on module configuration
- * Extends NestJS ConsoleLogger to respect application-level logger configuration
+ * Properly integrates with NestJS's built-in logger system
  */
 @Injectable({ scope: Scope.TRANSIENT })
-export class CustomLoggerService extends ConsoleLogger {
+export class CustomLoggerService implements LoggerService {
   private isEnabled = true;
   private logLevels: LogLevel[] = ['log', 'error', 'warn', 'debug', 'verbose'];
+  private readonly logger: LoggerService;
+  private context: string;
 
-  constructor(context: string, options?: GoogleOAuthOptions) {
-    super(context);
+  constructor(
+    @Optional() context?: string,
+    @Optional() @Inject('GOOGLE_OAUTH_OPTIONS') options?: GoogleOAuthOptions,
+    @Optional() @Inject('LOGGER') appLogger?: LoggerService
+  ) {
+    this.context = context || 'GoogleOAuth';
+    // Use provided logger or create a new ConsoleLogger as fallback
+    this.logger = appLogger || new ConsoleLogger(this.context);
 
     if (options?.logging) {
       this.isEnabled = options.logging.enabled !== false;
@@ -46,31 +54,39 @@ export class CustomLoggerService extends ConsoleLogger {
 
   error(message: any, stack?: string, context?: string): void {
     if (this.shouldLog('error')) {
-      super.error(message, stack, context);
+      this.logger.error(message, stack, context || this.context);
     }
   }
 
   warn(message: any, context?: string): void {
     if (this.shouldLog('warn')) {
-      super.warn(message, context);
+      this.logger.warn(message, context || this.context);
     }
   }
 
   log(message: any, context?: string): void {
     if (this.shouldLog('log')) {
-      super.log(message, context);
+      this.logger.log(message, context || this.context);
     }
   }
 
   debug(message: any, context?: string): void {
-    if (this.shouldLog('debug')) {
-      super.debug(message, context);
+    if (this.shouldLog('debug') && this.logger.debug) {
+      this.logger.debug(message, context || this.context);
     }
   }
 
   verbose(message: any, context?: string): void {
-    if (this.shouldLog('verbose')) {
-      super.verbose(message, context);
+    if (this.shouldLog('verbose') && this.logger.verbose) {
+      this.logger.verbose(message, context || this.context);
+    }
+  }
+  
+  // Add support for NestJS logger setContext method
+  setContext(context: string) {
+    this.context = context;
+    if (this.logger instanceof ConsoleLogger) {
+      this.logger.setContext(context);
     }
   }
 }

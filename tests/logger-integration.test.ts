@@ -1,31 +1,40 @@
 import { describe, it, expect, vi } from 'vitest';
-import { ConsoleLogger, LoggerService, LogLevel } from '@nestjs/common';
+import { ConsoleLogger } from '@nestjs/common';
 import { CustomLoggerService } from '../src/logger/custom-logger.service';
 import { JwtUtils } from '../src/utils/jwt.utils';
 
 describe('CustomLoggerService', () => {
-  it('should extend ConsoleLogger for NestJS integration', () => {
+  it('should implement LoggerService interface', () => {
     const logger = new CustomLoggerService('TestService');
-    expect(logger).toBeInstanceOf(ConsoleLogger);
+    expect(typeof logger.log).toBe('function');
+    expect(typeof logger.error).toBe('function');
+    expect(typeof logger.warn).toBe('function');
+    expect(typeof logger.debug).toBe('function');
+    expect(typeof logger.verbose).toBe('function');
   });
   
   it('should respect enabled/disabled setting', () => {
-    // Create logger with logging disabled
-    const logger = new CustomLoggerService('TestService', {
-      name: 'test-app',
-      credentialsFilename: 'test.json',
-      scopes: [],
-      logging: {
-        enabled: false
-      }
-    });
+    // Create mock logger
+    const mockLogger = {
+      error: vi.fn(),
+      warn: vi.fn(),
+      log: vi.fn(),
+      debug: vi.fn(),
+      verbose: vi.fn()
+    };
     
-    // Mock the ConsoleLogger methods
-    const mockLog = vi.spyOn(ConsoleLogger.prototype, 'log').mockImplementation(() => {});
-    const mockError = vi.spyOn(ConsoleLogger.prototype, 'error').mockImplementation(() => {});
-    const mockWarn = vi.spyOn(ConsoleLogger.prototype, 'warn').mockImplementation(() => {});
-    const mockDebug = vi.spyOn(ConsoleLogger.prototype, 'debug').mockImplementation(() => {});
-    const mockVerbose = vi.spyOn(ConsoleLogger.prototype, 'verbose').mockImplementation(() => {});
+    // Create logger with logging disabled
+    const logger = new CustomLoggerService('TestService', 
+      {
+        name: 'test-app',
+        credentialsFilename: 'test.json',
+        scopes: [],
+        logging: {
+          enabled: false
+        }
+      },
+      mockLogger as any
+    );
     
     // Should not log anything when disabled
     logger.log('test log');
@@ -34,34 +43,36 @@ describe('CustomLoggerService', () => {
     logger.debug('test debug');
     logger.verbose('test verbose');
     
-    expect(mockLog).not.toHaveBeenCalled();
-    expect(mockError).not.toHaveBeenCalled();
-    expect(mockWarn).not.toHaveBeenCalled();
-    expect(mockDebug).not.toHaveBeenCalled();
-    expect(mockVerbose).not.toHaveBeenCalled();
-    
-    // Cleanup
-    vi.restoreAllMocks();
+    expect(mockLogger.log).not.toHaveBeenCalled();
+    expect(mockLogger.error).not.toHaveBeenCalled();
+    expect(mockLogger.warn).not.toHaveBeenCalled();
+    expect(mockLogger.debug).not.toHaveBeenCalled();
+    expect(mockLogger.verbose).not.toHaveBeenCalled();
   });
   
   it('should respect log level filtering', () => {
-    // Create logger with only error level enabled
-    const logger = new CustomLoggerService('TestService', {
-      name: 'test-app',
-      credentialsFilename: 'test.json',
-      scopes: [],
-      logging: {
-        enabled: true,
-        level: 'error'
-      }
-    });
+    // Create mock logger
+    const mockLogger = {
+      error: vi.fn(),
+      warn: vi.fn(),
+      log: vi.fn(),
+      debug: vi.fn(),
+      verbose: vi.fn()
+    };
     
-    // Mock the ConsoleLogger methods
-    const mockLog = vi.spyOn(ConsoleLogger.prototype, 'log').mockImplementation(() => {});
-    const mockError = vi.spyOn(ConsoleLogger.prototype, 'error').mockImplementation(() => {});
-    const mockWarn = vi.spyOn(ConsoleLogger.prototype, 'warn').mockImplementation(() => {});
-    const mockDebug = vi.spyOn(ConsoleLogger.prototype, 'debug').mockImplementation(() => {});
-    const mockVerbose = vi.spyOn(ConsoleLogger.prototype, 'verbose').mockImplementation(() => {});
+    // Create logger with only error level enabled
+    const logger = new CustomLoggerService('TestService', 
+      {
+        name: 'test-app',
+        credentialsFilename: 'test.json',
+        scopes: [],
+        logging: {
+          enabled: true,
+          level: 'error'
+        }
+      },
+      mockLogger as any
+    );
     
     // Should only log errors
     logger.log('test log');
@@ -70,14 +81,31 @@ describe('CustomLoggerService', () => {
     logger.debug('test debug');
     logger.verbose('test verbose');
     
-    expect(mockLog).not.toHaveBeenCalled();
-    expect(mockError).toHaveBeenCalledWith('test error', undefined, undefined);
-    expect(mockWarn).not.toHaveBeenCalled();
-    expect(mockDebug).not.toHaveBeenCalled();
-    expect(mockVerbose).not.toHaveBeenCalled();
+    expect(mockLogger.log).not.toHaveBeenCalled();
+    expect(mockLogger.error).toHaveBeenCalledWith('test error', undefined, 'TestService');
+    expect(mockLogger.warn).not.toHaveBeenCalled();
+    expect(mockLogger.debug).not.toHaveBeenCalled();
+    expect(mockLogger.verbose).not.toHaveBeenCalled();
+  });
+  
+  it('should use the application logger when provided', () => {
+    // Create an app logger
+    const appLogger = {
+      error: vi.fn(),
+      warn: vi.fn(),
+      log: vi.fn(),
+      debug: vi.fn(),
+      verbose: vi.fn()
+    };
     
-    // Cleanup
-    vi.restoreAllMocks();
+    // Create our custom logger with the app logger
+    const logger = new CustomLoggerService('TestService', undefined, appLogger as any);
+    
+    // Log something
+    logger.log('test message');
+    
+    // Verify app logger was used
+    expect(appLogger.log).toHaveBeenCalledWith('test message', 'TestService');
   });
 });
 
@@ -112,54 +140,6 @@ describe('JwtUtils', () => {
     expect(mockConsoleLogger).toHaveBeenCalled();
     
     // Cleanup
-    vi.restoreAllMocks();
-  });
-  
-  it('should integrate with custom application-level logger via GoogleOAuthService', () => {
-    // Mock the import before the test
-    vi.mock('@nestjs/common', async (importOriginal) => {
-      const original = await importOriginal();
-      return {
-        ...original,
-        // Mock the Logger to simulate app-level logger override
-        ConsoleLogger: class MockConsoleLogger {
-          constructor() {}
-          error = vi.fn();
-          warn = vi.fn();
-          log = vi.fn();
-          debug = vi.fn();
-          verbose = vi.fn();
-        }
-      };
-    });
-    
-    // Force a re-import to use the mocked version
-    const { GoogleOAuthService } = require('../src/google-oauth.service');
-    
-    // Create a service instance
-    const service = new GoogleOAuthService(
-      {}, // mock token repository
-      {    // mock options
-        name: 'test-app',
-        credentialsFilename: 'credentials.json',
-        scopes: [],
-        logging: { enabled: true }
-      }
-    );
-    
-    // Call a method that uses JwtUtils
-    const invalidToken = 'invalid.token';
-    service.getUserIdFromIdToken(invalidToken);
-    
-    // Access the logger used by the service
-    // @ts-ignore (accessing private property for test)
-    const serviceLogger = service.logger;
-    
-    // Verify that logger method was called
-    expect(serviceLogger.warn).toHaveBeenCalled();
-    
-    // Clean up
-    vi.resetModules();
     vi.restoreAllMocks();
   });
 });
