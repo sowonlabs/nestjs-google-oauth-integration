@@ -18,6 +18,7 @@ npm install @sowonai/nestjs-google-oauth-integration googleapis @google-cloud/lo
 - Optimized for server-side Google API access
 - Easy integration with user accounts and Google services
 - Simple integration as a NestJS module
+- Integrated logging system that respects NestJS application logger settings
 
 ## Usage
 
@@ -135,6 +136,35 @@ class CustomTokenRepository implements TokenRepository {
 export class ServerAppModule {}
 ```
 
+### Configuring Logging
+
+The module integrates with NestJS's built-in logging system. You can configure logging in two ways:
+
+1. Using the module's logging options:
+
+```typescript
+GoogleOAuthModule.forRoot({
+  name: 'my-app',
+  credentialsFilename: 'credentials.json',
+  scopes: ['https://www.googleapis.com/auth/gmail.readonly'],
+  logging: {
+    enabled: true,  // Set to false to disable logging from this module
+    level: 'error'  // Set the log level: 'error', 'warn', 'log', 'debug', or 'verbose'
+  }
+})
+```
+
+2. Using NestJS's application logger configuration:
+
+```typescript
+// In your main.ts file
+const app = await NestFactory.create(AppModule, {
+  logger: ['error', 'warn'], // Only error and warning logs will be shown from all modules
+});
+```
+
+The module's logger respects both configurations, giving you fine-grained control over log output.
+
 ### Example: Using the Service
 
 ```typescript
@@ -197,6 +227,7 @@ This module is especially useful for the following scenarios:
 - **Easy Integration**: Seamless with NestJS module system
 - **Automated Authentication Flow**: Abstracts complex OAuth 2.0 logic
 - **Extensible Design**: Easily extend with custom token repositories
+- **Integrated Logging**: Fully integrates with NestJS logger system
 
 ## Related Projects
 
