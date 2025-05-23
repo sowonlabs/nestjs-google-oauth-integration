@@ -6,13 +6,28 @@
 import { GoogleOAuthService } from '../google-oauth.service';
 import { JwtUtils } from '../utils/jwt.utils';
 import { ApplicationLoggerExample } from './application-logger.example';
+import { TokenRepository } from '../interfaces/token-repository.interface';
+import { Credentials } from 'google-auth-library';
+
+// Create a mock token repository that implements TokenRepository interface
+const mockTokenRepository: TokenRepository = {
+  async getToken(): Promise<Credentials | null> {
+    return null;
+  },
+  async saveToken(): Promise<void> {
+    // Do nothing
+  },
+  async hasToken(): Promise<boolean> {
+    return false;
+  }
+};
 
 // Create a sample app logger (simulating NestFactory.create with custom logger)
 const appLogger = new ApplicationLoggerExample('TestApp', { timestamp: true });
 
 // Create a service with the custom logger
 const service = new GoogleOAuthService(
-  {}, // Mock token repository
+  mockTokenRepository, // Properly implemented mock token repository
   {   // Mock options
     name: 'test-app',
     credentialsFilename: 'credentials.json',
