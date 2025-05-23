@@ -1,18 +1,18 @@
-import { Injectable, Logger, LogLevel, Scope } from '@nestjs/common';
+import { ConsoleLogger, Injectable, LogLevel, Scope } from '@nestjs/common';
 import { GoogleOAuthOptions } from '../google-oauth.module';
 
 /**
  * Custom Logger Service
  * Supports log level filtering and logging activation/deactivation based on module configuration
+ * Extends NestJS ConsoleLogger to respect application-level logger configuration
  */
 @Injectable({ scope: Scope.TRANSIENT })
-export class CustomLoggerService {
-  private readonly logger: Logger;
+export class CustomLoggerService extends ConsoleLogger {
   private isEnabled = true;
   private logLevels: LogLevel[] = ['log', 'error', 'warn', 'debug', 'verbose'];
 
   constructor(context: string, options?: GoogleOAuthOptions) {
-    this.logger = new Logger(context);
+    super(context);
 
     if (options?.logging) {
       this.isEnabled = options.logging.enabled !== false;
@@ -44,33 +44,33 @@ export class CustomLoggerService {
     return this.isEnabled && this.logLevels.includes(level);
   }
 
-  error(message: any, trace?: string): void {
+  error(message: any, stack?: string, context?: string): void {
     if (this.shouldLog('error')) {
-      this.logger.error(message, trace);
+      super.error(message, stack, context);
     }
   }
 
-  warn(message: any): void {
+  warn(message: any, context?: string): void {
     if (this.shouldLog('warn')) {
-      this.logger.warn(message);
+      super.warn(message, context);
     }
   }
 
-  log(message: any): void {
+  log(message: any, context?: string): void {
     if (this.shouldLog('log')) {
-      this.logger.log(message);
+      super.log(message, context);
     }
   }
 
-  debug(message: any): void {
+  debug(message: any, context?: string): void {
     if (this.shouldLog('debug')) {
-      this.logger.debug(message);
+      super.debug(message, context);
     }
   }
 
-  verbose(message: any): void {
+  verbose(message: any, context?: string): void {
     if (this.shouldLog('verbose')) {
-      this.logger.verbose(message);
+      super.verbose(message, context);
     }
   }
 }

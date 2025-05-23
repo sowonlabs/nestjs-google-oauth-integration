@@ -1,10 +1,11 @@
-import { Logger } from '@nestjs/common';
+import { ConsoleLogger } from '@nestjs/common';
+import { CustomLoggerService } from '../logger/custom-logger.service';
 
 /**
  * Utility functions for JWT handling.
  */
 export class JwtUtils {
-  private static readonly logger = new Logger(JwtUtils.name);
+  private static readonly logger = new ConsoleLogger(JwtUtils.name);
 
   /**
    * Decodes a JWT token and returns the payload.
