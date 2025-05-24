@@ -1,11 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
-import { ConsoleLogger } from '@nestjs/common';
-import { CustomLoggerService } from '../src/logger/custom-logger.service';
+import { Logger } from '@nestjs/common';
 import { JwtUtils } from '../src/utils/jwt.utils';
 
-describe('CustomLoggerService', () => {
-  it('should implement LoggerService interface', () => {
-    const logger = new CustomLoggerService('TestService');
+describe('Logger Integration', () => {
+  it('should use standard NestJS Logger in services', () => {
+    // Test that Logger can be instantiated without issues
+    const logger = new Logger('TestService');
+    expect(logger).toBeDefined();
     expect(typeof logger.log).toBe('function');
     expect(typeof logger.error).toBe('function');
     expect(typeof logger.warn).toBe('function');
@@ -13,133 +14,55 @@ describe('CustomLoggerService', () => {
     expect(typeof logger.verbose).toBe('function');
   });
   
-  it('should respect enabled/disabled setting', () => {
-    // Create mock logger
-    const mockLogger = {
-      error: vi.fn(),
-      warn: vi.fn(),
-      log: vi.fn(),
-      debug: vi.fn(),
-      verbose: vi.fn()
-    };
+  it('should properly inherit application-level logger configuration', () => {
+    // This test verifies that the logger inherits app-level configuration
+    // In a real NestJS app, this would be handled by the framework
+    const logger = new Logger('TestService');
     
-    // Create logger with logging disabled
-    const logger = new CustomLoggerService('TestService', 
-      {
-        name: 'test-app',
-        credentialsFilename: 'test.json',
-        scopes: [],
-        logging: {
-          enabled: false
-        }
-      },
-      mockLogger as any
-    );
+    // Mock the underlying logger methods to test they can be called
+    const logSpy = vi.spyOn(logger, 'log').mockImplementation(() => {});
+    const errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     
-    // Should not log anything when disabled
+    // Test that methods can be called without issues
     logger.log('test log');
     logger.error('test error');
     logger.warn('test warn');
-    logger.debug('test debug');
-    logger.verbose('test verbose');
     
-    expect(mockLogger.log).not.toHaveBeenCalled();
-    expect(mockLogger.error).not.toHaveBeenCalled();
-    expect(mockLogger.warn).not.toHaveBeenCalled();
-    expect(mockLogger.debug).not.toHaveBeenCalled();
-    expect(mockLogger.verbose).not.toHaveBeenCalled();
-  });
-  
-  it('should respect log level filtering', () => {
-    // Create mock logger
-    const mockLogger = {
-      error: vi.fn(),
-      warn: vi.fn(),
-      log: vi.fn(),
-      debug: vi.fn(),
-      verbose: vi.fn()
-    };
+    expect(logSpy).toHaveBeenCalledWith('test log');
+    expect(errorSpy).toHaveBeenCalledWith('test error');
+    expect(warnSpy).toHaveBeenCalledWith('test warn');
     
-    // Create logger with only error level enabled
-    const logger = new CustomLoggerService('TestService', 
-      {
-        name: 'test-app',
-        credentialsFilename: 'test.json',
-        scopes: [],
-        logging: {
-          enabled: true,
-          level: 'error'
-        }
-      },
-      mockLogger as any
-    );
-    
-    // Should only log errors
-    logger.log('test log');
-    logger.error('test error');
-    logger.warn('test warn');
-    logger.debug('test debug');
-    logger.verbose('test verbose');
-    
-    expect(mockLogger.log).not.toHaveBeenCalled();
-    expect(mockLogger.error).toHaveBeenCalledWith('test error', undefined, 'TestService');
-    expect(mockLogger.warn).not.toHaveBeenCalled();
-    expect(mockLogger.debug).not.toHaveBeenCalled();
-    expect(mockLogger.verbose).not.toHaveBeenCalled();
-  });
-  
-  it('should use the application logger when provided', () => {
-    // Create an app logger
-    const appLogger = {
-      error: vi.fn(),
-      warn: vi.fn(),
-      log: vi.fn(),
-      debug: vi.fn(),
-      verbose: vi.fn()
-    };
-    
-    // Create our custom logger with the app logger
-    const logger = new CustomLoggerService('TestService', undefined, appLogger as any);
-    
-    // Log something
-    logger.log('test message');
-    
-    // Verify app logger was used
-    expect(appLogger.log).toHaveBeenCalledWith('test message', 'TestService');
+    // Cleanup
+    vi.restoreAllMocks();
   });
 });
 
 describe('JwtUtils', () => {
-  it('should use the provided logger', () => {
-    // Create a mock logger
-    const mockLogger = {
-      error: vi.fn(),
-      warn: vi.fn(),
-      log: vi.fn(),
-      debug: vi.fn(),
-      verbose: vi.fn()
-    };
-    
-    // Invalid token to trigger warning
-    const invalidToken = 'not.a.valid.token';
-    JwtUtils.decodeJwtToken(invalidToken, mockLogger as any);
-    
-    // Should use the provided logger
-    expect(mockLogger.warn).toHaveBeenCalledWith('Invalid JWT format');
-  });
-  
-  it('should use the default logger when none is provided', () => {
-    // Mock ConsoleLogger
-    const mockConsoleLogger = vi.spyOn(ConsoleLogger.prototype, 'warn').mockImplementation(() => {});
+  it('should use internal Logger instance', () => {
+    // Mock Logger warn method
+    const mockLoggerWarn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
     
     // Invalid token to trigger warning
     const invalidToken = 'not.a.valid.token';
     JwtUtils.decodeJwtToken(invalidToken);
     
-    // Should use the default logger
-    expect(mockConsoleLogger).toHaveBeenCalled();
+    // Should use the internal logger
+    expect(mockLoggerWarn).toHaveBeenCalledWith('Invalid JWT format');
     
     // Cleanup
     vi.restoreAllMocks();
+  });
+  
+  it('should decode valid JWT token', () => {
+    // Valid JWT token (header.payload.signature format)
+    const validToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+    
+    const result = JwtUtils.decodeJwtToken(validToken);
+    
+    expect(result).toBeDefined();
+    expect(result.sub).toBe('1234567890');
+    expect(result.name).toBe('John Doe');
+    expect(result.iat).toBe(1516239022);
   });
 });

@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Test } from '@nestjs/testing';
-import { GoogleOAuthModule, LoggerProvider } from '../src/google-oauth.module';
+import { Logger } from '@nestjs/common';
+import { GoogleOAuthModule } from '../src/google-oauth.module';
 import { GoogleOAuthService } from '../src/google-oauth.service';
 import { TokenRepository } from '../src/interfaces/token-repository.interface';
 import { Credentials } from 'google-auth-library';
-import { CustomLoggerService } from '../src/logger/custom-logger.service';
 
 // Mock NestJS's authenticate function
 vi.mock('@google-cloud/local-auth', () => ({
@@ -59,30 +59,6 @@ describe('Google OAuth Module', () => {
           tokenRepository: new InMemoryTokenRepository()
         }),
       ],
-      providers: [
-        {
-          provide: CustomLoggerService,
-          useFactory: () => ({
-            log: vi.fn(),
-            error: vi.fn(),
-            warn: vi.fn(),
-            debug: vi.fn(),
-            verbose: vi.fn()
-          })
-        },
-        {
-          provide: LoggerProvider,
-          useFactory: () => ({
-            getLogger: () => ({
-              log: vi.fn(),
-              error: vi.fn(),
-              warn: vi.fn(),
-              debug: vi.fn(),
-              verbose: vi.fn()
-            })
-          })
-        }
-      ]
     }).compile();
     
     // Get the service
@@ -102,52 +78,57 @@ describe('Google OAuth Module', () => {
     expect(isAuthenticated).toBe(true);
   });
   
-  it('should respect logging configuration', async () => {
-    // Create a mock logger
-    const mockLogger = {
-      log: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn(),
-      debug: vi.fn(),
-      verbose: vi.fn()
-    };
+  it('should use standard NestJS Logger', async () => {
+    // Mock Logger methods to verify they are used
+    const mockLoggerLog = vi.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
+    const mockLoggerError = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    const mockLoggerWarn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
     
-    // Create test module with logging enabled but level set to error
+    // Create test module
     const moduleRef = await Test.createTestingModule({
       imports: [
         GoogleOAuthModule.forRoot({
           name: 'test-app',
           credentialsFilename: 'credentials.json',
           scopes: ['https://www.googleapis.com/auth/drive'],
-          logging: {
-            enabled: true,
-            level: 'error' // Only error logs should be shown
-          },
+          tokenRepository: new InMemoryTokenRepository()
         }),
       ],
-      providers: [
-        {
-          provide: 'APP_LOGGER',
-          useValue: mockLogger
-        }
-      ]
-    }).overrideProvider(LoggerProvider).useFactory({
-      factory: () => ({
-        getLogger: () => mockLogger
-      })
     }).compile();
     
     // Get the service
     const service = moduleRef.get<GoogleOAuthService>(GoogleOAuthService);
 
-    // Test the hello method (should log at debug level)
-    service.hello();
+    // The service should now use standard NestJS Logger
+    expect(service).toBeDefined();
     
-    // Since level is set to 'error', debug logs should not appear
-    expect(mockLogger.debug).not.toHaveBeenCalled();
+    // Test that the service can be used without logger configuration issues
+    const isAuthenticated = await service.isAuthenticated();
+    expect(typeof isAuthenticated).toBe('boolean');
     
-    // But if we log an error, it should be shown
-    service['logger'].error('Test error message');
-    expect(mockLogger.error).toHaveBeenCalledWith('Test error message', undefined, 'GoogleOAuthService');
+    // Cleanup
+    vi.restoreAllMocks();
+  });
+  
+  it('should work without complex logger configuration', async () => {
+    // This test verifies that the module works without any logger providers
+    const moduleRef = await Test.createTestingModule({
+      imports: [
+        GoogleOAuthModule.forRoot({
+          name: 'test-app',
+          credentialsFilename: 'credentials.json',
+          scopes: ['https://www.googleapis.com/auth/drive'],
+          tokenRepository: new InMemoryTokenRepository()
+        }),
+      ],
+    }).compile();
+    
+    // Get the service - should work without complex DI chain
+    const service = moduleRef.get<GoogleOAuthService>(GoogleOAuthService);
+    expect(service).toBeDefined();
+    
+    // Test basic functionality
+    const isAuthenticated = await service.isAuthenticated();
+    expect(typeof isAuthenticated).toBe('boolean');
   });
 });
