@@ -166,5 +166,43 @@ export class GoogleOAuthService {
 
     return true;
   }
+
+  async getCredentials(): Promise<{
+    clientId: string;
+    clientSecret: string;
+    redirectUri: string;
+  }> {
+    const credentialsPath = this.getCredentialsPath();
+    if (!fs.existsSync(credentialsPath)) {
+      this.logger.error(`Credentials file not found at path: ${credentialsPath}`);
+      throw new Error(`Credentials file not found: ${credentialsPath}`);
+    }
+
+    const credentials = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
+    const clientId = credentials.installed?.client_id || credentials.web?.client_id;
+    const clientSecret = credentials.installed?.client_secret || credentials.web?.client_secret;
+    const redirectUri = credentials.installed?.redirect_uris?.[0] || credentials.web?.redirect_uris?.[0];
+
+    return {
+      clientId,
+      clientSecret,
+      redirectUri,
+    };
+  }
+
+  async authenticateForRefreshToken(): Promise<{
+    clientId: string;
+    clientSecret: string;
+    refreshToken: string;
+  }> {
+    const cred = await this.authenticate();
+    const { clientId, clientSecret } = await this.getCredentials();
+
+    return {
+      clientId,
+      clientSecret,
+      refreshToken: cred.refresh_token || ''
+    };
+  }
 }
 
